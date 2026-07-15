@@ -33,3 +33,4 @@ pypdf
 rank_bm25
 uuid
 pydantic
+docx
