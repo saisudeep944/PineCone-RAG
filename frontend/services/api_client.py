@@ -75,8 +75,6 @@ def upload_document(file, namespace: str):
 # ==========================================
 
 def stream_chat(session_id: str, message: str):
-    # FIXED THE 422 ERROR HERE:
-    # Changed "message": message -> "query": message to perfectly align with your backend Pydantic schema
     response = requests.post(
         f"{BASE_URL}/chat/stream",
         json={
@@ -88,9 +86,15 @@ def stream_chat(session_id: str, message: str):
 
     response.raise_for_status()
 
-    for chunk in response.iter_content(
-        chunk_size=1024,
-        decode_unicode=True
-    ):
-        if chunk:
-            yield chunk
+    # Read line-by-line instead of cracking raw byte chunks mid-sentence
+    for line in response.iter_lines():
+        if line:
+            # Decode byte string to a clean text string
+            decoded_line = line.decode("utf-8").strip()
+            
+            # If your FastAPI backend uses standard Server-Sent Events (SSE), 
+            # it might prefix lines with "data: ". Clean it if present:
+            if decoded_line.startswith("data: "):
+                decoded_line = decoded_line[6:].strip()
+                
+            yield decoded_line
