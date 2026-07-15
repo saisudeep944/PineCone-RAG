@@ -1,3 +1,6 @@
 fastapi
 uvicorn
 requests
+pinecone-client
+sentence-transformers
+groq
