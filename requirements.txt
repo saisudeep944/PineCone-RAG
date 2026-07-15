@@ -29,3 +29,8 @@ urllib3==2.7.0
 uvicorn==0.51.0
 python-dotenv
 redis
+pypdf
+rank_bm25
+uuid
+pprint
+pydantic
