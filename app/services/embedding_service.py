@@ -1,30 +1,30 @@
 import os
-import requests
+from huggingface_hub import InferenceClient
 
-# 1. Grab your free Hugging Face token from environment variables
-HF_TOKEN = os.environ.get("HF_TOKEN")
-
-# 2. CORRECTED: Path to the specific serverless endpoint for your target model
-API_URL = "https://huggingface.co"
+# 1. Initialize using your exact requested provider pattern
+client = InferenceClient(
+    provider="hf-inference",
+    api_key=os.environ.get("HF_TOKEN"),
+)
 
 
 def generate_embeddings(texts: list):
-    # Ensure it always handles a list format
     if isinstance(texts, str):
         texts = [texts]
 
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-    payload = {"inputs": texts, "options": {"wait_for_model": True}}
-
     try:
-        response = requests.post(API_URL, headers=headers, json=payload)
-        response.raise_for_status()
+        # 2. Generates structural float coordinate arrays instead of text mappings
+        embeddings = client.feature_extraction(
+            text=texts, model="sentence-transformers/all-MiniLM-L6-v2"
+        )
 
-        # 3. CORRECTED: Removed .tolist(). The API already sends a standard list back.
-        embeddings = response.json()
-        return embeddings
+        # Convert return format to a native python list safely
+        if hasattr(embeddings, "tolist"):
+            return embeddings.tolist()
+
+        return list(embeddings)
 
     except Exception as e:
         raise RuntimeError(
-            f"Failed to generate embeddings from Hugging Face API: {e}"
+            f"Failed to generate embeddings from Hugging Face Client: {e}"
         )
