@@ -1,45 +1,43 @@
-from sentence_transformers import CrossEncoder
+import os
+import requests
+
+# 1. Grab your free Hugging Face token from environment variables
+HF_TOKEN = os.environ.get("HF_TOKEN")
+
+# 2. Target the specific serverless endpoint for the ms-marco cross-encoder
+API_URL = "https://huggingface.co"
 
 
-reranker_model = CrossEncoder(
-    "cross-encoder/ms-marco-MiniLM-L-6-v2"
-)
-
-
-def rerank_results(
-    query,
-    retrieved_chunks,
-    top_k=5
-):
-
+def rerank_results(query, retrieved_chunks, top_k=5):
+    # Prepare the query-text pairs exactly how the Hugging Face API expects them
     pairs = [
-        (query, chunk["text"])
-        for chunk in retrieved_chunks
+        {"text": query, "text_pair": chunk["text"]} for chunk in retrieved_chunks
     ]
 
-    scores = reranker_model.predict(pairs)
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+    payload = {"inputs": pairs, "options": {"wait_for_model": True}}
 
-    reranked = []
+    try:
+        response = requests.post(API_URL, headers=headers, json=payload)
+        response.raise_for_status()
 
-    for chunk, score in zip(
-        retrieved_chunks,
-        scores
-    ):
+        # The API directly returns a list of dictionaries containing scores: [{"score": 0.99}, ...]
+        api_results = response.json()
 
-        reranked.append({
-            "chunk": chunk,
-            "rerank_score": float(score)
-        })
+        reranked = []
+        for chunk, api_res in zip(retrieved_chunks, api_results):
+            # Extract the raw score float from the API response
+            score = api_res.get("score", 0.0)
 
-    reranked.sort(
-        key=lambda x: x["rerank_score"],
-        reverse=True
-    )
-    print("\nRAW RETRIEVED CHUNKS:\n")
+            reranked.append({"chunk": chunk, "rerank_score": float(score)})
 
-    print(retrieved_chunks)
+        # Sort results by the highest rerank score descending
+        reranked.sort(key=lambda x: x["rerank_score"], reverse=True)
 
-    print("\nFINAL RERANKED RESULTS:\n")
+        print("\nRAW RETRIEVED CHUNKS:\n", retrieved_chunks)
+        print("\nFINAL RERANKED RESULTS:\n", reranked)
 
-    print(reranked)
-    return reranked[:top_k]
+        return reranked[:top_k]
+
+    except Exception as e:
+        raise RuntimeError(f"Failed to rerank results via Hugging Face API: {e}")
