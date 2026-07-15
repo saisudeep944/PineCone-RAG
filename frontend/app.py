@@ -10,11 +10,15 @@ from services.api_client import (
     stream_chat
 )
 
+BACKEND_URL = os.environ.get("BACKEND_URL")
 
-if "BACKEND_URL" in st.secrets:
-    BACKEND_URL = st.secrets["BACKEND_URL"]
-else:
-    BACKEND_URL = os.environ.get("BACKEND_URL", "http://127.0.0.1:8000")
+# 2. Check st.secrets only if running on Streamlit Cloud, default to local if neither exists
+if not BACKEND_URL:
+    if "BACKEND_URL" in getattr(st, "secrets", {}):
+        BACKEND_URL = st.secrets["BACKEND_URL"]
+    else:
+        BACKEND_URL = "http://127.0.0.1:8000"
+
 
 # ==========================================
 # Helper Functions
