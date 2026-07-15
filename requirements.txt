@@ -32,5 +32,4 @@ redis
 pypdf
 rank_bm25
 uuid
-pprint
 pydantic
